@@ -1,0 +1,12 @@
+﻿<Application x:Class="Kamera21.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:Kamera21.Converters">
+    <Application.Resources>
+        <converters:BooleanToStatusConverter x:Key="BooleanToStatusConverter"/>
+        <converters:DefectsToColorConverter x:Key="DefectsToColorConverter"/>
+        <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <converters:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
+        <converters:BooleanToStatusColorConverter x:Key="BooleanToStatusColorConverter"/>
+    </Application.Resources>
+</Application>

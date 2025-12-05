@@ -1,0 +1,672 @@
+﻿<Window x:Class="Kamera21.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="clr-namespace:Kamera21.Converters"
+        mc:Ignorable="d"
+        Title="Kamera21 - Система контроля плат (2 камеры)" 
+        Height="900" 
+        Width="1600"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <converters:BooleanToStatusColorConverter x:Key="BooleanToStatusColorConverter"/>
+        <converters:BooleanToStatusConverter x:Key="BooleanToStatusConverter"/>
+        <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <converters:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
+        <converters:DefectsToColorConverter x:Key="DefectsToColorConverter"/>
+
+        <!-- Стиль для ComboBox -->
+        <Style TargetType="ComboBox" x:Key="CameraComboBoxStyle">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Height" Value="28"/>
+        </Style>
+
+        <!-- Стиль для кнопок переключения -->
+        <Style TargetType="Button" x:Key="SwitchButtonStyle">
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Конвертер для инвертирования булевого значения -->
+        <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Панель управления -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#2D2D30" Height="50">
+            <!-- Групповые операции -->
+            <Button Content="📷 Подключить все камеры" 
+                    Command="{Binding ConnectAllCamerasCommand}"
+                    Background="#0E639C"
+                    Foreground="White"
+                    Margin="5"
+                    Padding="10,5"/>
+
+            <Button Content="❌ Отключить все камеры" 
+                    Command="{Binding DisconnectAllCamerasCommand}"
+                    Background="#A1260D"
+                    Foreground="White"
+                    Margin="5"
+                    Padding="10,5"/>
+
+            <Button Content="▶ Запустить все трансляции" 
+                    Command="{Binding StartAllLiveStreamsCommand}"
+                    Background="#107C10"
+                    Foreground="White"
+                    Margin="5"
+                    Padding="10,5"/>
+
+            <Button Content="⏹ Остановить все трансляции" 
+                    Command="{Binding StopAllLiveStreamsCommand}"
+                    Background="#D83B01"
+                    Foreground="White"
+                    Margin="5"
+                    Padding="10,5"/>
+
+            <Separator Width="2" Background="Gray" Margin="5,10"/>
+
+            <!-- Проверка платы -->
+            <Button Content="🔍 Проверить плату" 
+                    Command="{Binding StartInspectionCommand}"
+                    Background="#68217A"
+                    Foreground="White"
+                    Margin="5"
+                    Padding="10,5"
+                    ToolTip="Проверить плату (использует обе камеры)"/>
+
+            <Button Content="⏹ Остановить проверку" 
+                    Command="{Binding StopInspectionCommand}"
+                    Background="#D83B01"
+                    Foreground="White"
+                    Margin="5"
+                    Padding="10,5"
+                    IsEnabled="{Binding IsInspecting}"/>
+
+            <Button Content="💾 Сохранить результаты" 
+                    Command="{Binding SaveResultsCommand}"
+                    Margin="5"
+                    Padding="10,5"/>
+        </StackPanel>
+
+        <!-- Вкладки -->
+        <TabControl Grid.Row="1" Margin="5">
+            <!-- Вкладка 1: Камеры -->
+            <TabItem Header="📷 Камеры">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Камера 1 -->
+                    <Border Grid.Column="0" Margin="5" BorderBrush="LightGray" BorderThickness="1">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Заголовок камеры 1 -->
+                            <Border Grid.Row="0" Background="#1E1E1E" Padding="10">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Камера 1 (Live проверка):" 
+                                               Foreground="White" 
+                                               FontWeight="Bold"
+                                               VerticalAlignment="Center"/>
+
+                                    <TextBlock Text="{Binding Camera1.StatusMessage}" 
+                                               Foreground="LightGreen"
+                                               Margin="10,0,0,0"
+                                               VerticalAlignment="Center"/>
+
+                                    <TextBlock Text="{Binding Camera1.DisplayFps, StringFormat=' FPS: {0}'}" 
+                                               Foreground="LightBlue"
+                                               Margin="10,0,0,0"
+                                               VerticalAlignment="Center"/>
+
+                                    <TextBlock Text="{Binding Camera1.Resolution, StringFormat=' {0}'}" 
+                                               Foreground="LightYellow"
+                                               Margin="5,0,0,0"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Изображение камеры 1 -->
+                            <Border Grid.Row="1" Background="Black">
+                                <Grid>
+                                    <Image Source="{Binding Camera1.CameraImage}" 
+                                           Stretch="Uniform"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+
+                                    <!-- Индикатор live-трансляции -->
+                                    <Border Background="#80000000" 
+                                            HorizontalAlignment="Left" 
+                                            VerticalAlignment="Top"
+                                            Margin="10" Padding="5,2"
+                                            CornerRadius="3"
+                                            Visibility="{Binding Camera1.IsLiveStreaming, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="10" Height="10" Fill="Red" Margin="0,0,5,0">
+                                                <Ellipse.Triggers>
+                                                    <EventTrigger RoutedEvent="Loaded">
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <ColorAnimation From="Red" To="DarkRed" 
+                                                                               Duration="0:0:0.5" 
+                                                                               AutoReverse="True"
+                                                                               RepeatBehavior="Forever"
+                                                                               Storyboard.TargetProperty="(Ellipse.Fill).(SolidColorBrush.Color)"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </EventTrigger>
+                                                </Ellipse.Triggers>
+                                            </Ellipse>
+                                            <TextBlock Text="LIVE" Foreground="White" FontWeight="Bold"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Сообщение при отсутствии изображения -->
+                                    <Border Background="#80000000" 
+                                            HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"
+                                            Padding="20,10"
+                                            CornerRadius="5"
+                                            Visibility="{Binding Camera1.CameraImage, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                        <TextBlock Text="Изображение не доступно" 
+                                                   Foreground="White" 
+                                                   FontSize="16"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <!-- Управление камерой 1 -->
+                            <Border Grid.Row="2" Background="#F0F0F0" Padding="5">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Источник:" 
+                                               VerticalAlignment="Center"
+                                               Margin="5,0,5,0"/>
+
+                                    <!-- Панель выбора источника -->
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="5,0">
+                                        <!-- Выбор камеры из списка -->
+                                        <ComboBox ItemsSource="{Binding Camera1.AvailableCameras}"
+                                                  SelectedItem="{Binding Camera1.SelectedCamera}"
+                                                  DisplayMemberPath="DisplayName"
+                                                  Width="200"
+                                                  Margin="5,0"
+                                                  IsEnabled="{Binding Camera1.ShowCameraList}"
+                                                  Visibility="{Binding Camera1.ShowCameraList, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                  Style="{StaticResource CameraComboBoxStyle}">
+                                            <ComboBox.ToolTip>
+                                                <TextBlock>Выберите USB-камеру с ПК</TextBlock>
+                                            </ComboBox.ToolTip>
+                                        </ComboBox>
+
+                                        <!-- Поле для ввода URL (скрытое по умолчанию) -->
+                                        <TextBox Text="{Binding Camera1.CameraUrl}" 
+                                                 Width="200" 
+                                                 Margin="5,0"
+                                                 IsEnabled="{Binding Camera1.ShowUrlInput}"
+                                                 Visibility="{Binding Camera1.ShowUrlInput, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBox.ToolTip>
+                                                <TextBlock>Введите URL IP-камеры (например: rtsp://192.168.1.100:554 или 0 для веб-камеры)</TextBlock>
+                                            </TextBox.ToolTip>
+                                        </TextBox>
+
+                                        <!-- Кнопки переключения между режимами -->
+                                        <Button Content="🌐 IP" 
+                                                Command="{Binding Camera1.SwitchToUrlInputCommand}"
+                                                Style="{StaticResource SwitchButtonStyle}"
+                                                Visibility="{Binding Camera1.ShowCameraList, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                ToolTip="Переключиться на ввод URL IP-камеры"/>
+
+                                        <Button Content="📷 USB" 
+                                                Command="{Binding Camera1.SwitchToCameraListCommand}"
+                                                Style="{StaticResource SwitchButtonStyle}"
+                                                Visibility="{Binding Camera1.ShowUrlInput, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                ToolTip="Переключиться на выбор USB-камеры"/>
+
+                                        <Button Content="🔄 Обновить" 
+                                                Command="{Binding Camera1.LoadAvailableCamerasCommand}"
+                                                Style="{StaticResource SwitchButtonStyle}"
+                                                ToolTip="Обновить список USB-камер"/>
+                                    </StackPanel>
+
+                                    <Separator Width="2" Background="Gray" Margin="10,0" Height="28" VerticalAlignment="Center"/>
+
+                                    <!-- Кнопки управления -->
+                                    <Button Content="🔗 Подключить" 
+                                            Command="{Binding Camera1.ConnectCommand}"
+                                            Margin="5,0"
+                                            Padding="10,5"
+                                            Background="{Binding Camera1.IsConnected, Converter={StaticResource BooleanToColorConverter}}"
+                                            Foreground="White"
+                                            Height="32"
+                                            VerticalAlignment="Center"/>
+
+                                    <Button Content="▶ Live" 
+                                            Command="{Binding Camera1.StartLiveStreamCommand}"
+                                            Margin="5,0"
+                                            Padding="10,5"
+                                            Background="#007ACC"
+                                            Foreground="White"
+                                            IsEnabled="{Binding Camera1.IsConnected}"
+                                            Height="32"
+                                            VerticalAlignment="Center"/>
+
+                                    <Button Content="⏹ Стоп" 
+                                            Command="{Binding Camera1.StopLiveStreamCommand}"
+                                            Margin="5,0"
+                                            Padding="10,5"
+                                            Background="#D83B01"
+                                            Foreground="White"
+                                            Height="32"
+                                            VerticalAlignment="Center"/>
+
+                                    <Button Content="📸 Кадр" 
+                                            Command="{Binding Camera1.CaptureFrameCommand}"
+                                            Margin="5,0"
+                                            Padding="10,5"
+                                            Height="32"
+                                            VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- Камера 2 -->
+                    <Border Grid.Column="1" Margin="5" BorderBrush="LightGray" BorderThickness="1">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Заголовок камеры 2 -->
+                            <Border Grid.Row="0" Background="#1E1E1E" Padding="10">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Камера 2 (Контроль платы):" 
+                                               Foreground="White" 
+                                               FontWeight="Bold"
+                                               VerticalAlignment="Center"/>
+
+                                    <TextBlock Text="{Binding Camera2.StatusMessage}" 
+                                               Foreground="LightGreen"
+                                               Margin="10,0,0,0"
+                                               VerticalAlignment="Center"/>
+
+                                    <TextBlock Text="{Binding Camera2.DisplayFps, StringFormat=' FPS: {0}'}" 
+                                               Foreground="LightBlue"
+                                               Margin="10,0,0,0"
+                                               VerticalAlignment="Center"/>
+
+                                    <TextBlock Text="{Binding Camera2.Resolution, StringFormat=' {0}'}" 
+                                               Foreground="LightYellow"
+                                               Margin="5,0,0,0"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Изображение камеры 2 -->
+                            <Border Grid.Row="1" Background="Black">
+                                <Grid>
+                                    <Image Source="{Binding Camera2.CameraImage}" 
+                                           Stretch="Uniform"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+
+                                    <!-- Индикатор live-трансляции -->
+                                    <Border Background="#80000000" 
+                                            HorizontalAlignment="Left" 
+                                            VerticalAlignment="Top"
+                                            Margin="10" Padding="5,2"
+                                            CornerRadius="3"
+                                            Visibility="{Binding Camera2.IsLiveStreaming, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="10" Height="10" Fill="Red" Margin="0,0,5,0">
+                                                <Ellipse.Triggers>
+                                                    <EventTrigger RoutedEvent="Loaded">
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <ColorAnimation From="Red" To="DarkRed" 
+                                                                               Duration="0:0:0.5" 
+                                                                               AutoReverse="True"
+                                                                               RepeatBehavior="Forever"
+                                                                               Storyboard.TargetProperty="(Ellipse.Fill).(SolidColorBrush.Color)"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </EventTrigger>
+                                                </Ellipse.Triggers>
+                                            </Ellipse>
+                                            <TextBlock Text="LIVE" Foreground="White" FontWeight="Bold"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Сообщение при отсутствии изображения -->
+                                    <Border Background="#80000000" 
+                                            HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"
+                                            Padding="20,10"
+                                            CornerRadius="5"
+                                            Visibility="{Binding Camera2.CameraImage, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                        <TextBlock Text="Изображение не доступно" 
+                                                   Foreground="White" 
+                                                   FontSize="16"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <!-- Управление камерой 2 -->
+                            <Border Grid.Row="2" Background="#F0F0F0" Padding="5">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Источник:" 
+                                               VerticalAlignment="Center"
+                                               Margin="5,0,5,0"/>
+
+                                    <!-- Панель выбора источника -->
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="5,0">
+                                        <!-- Выбор камеры из списка -->
+                                        <ComboBox ItemsSource="{Binding Camera2.AvailableCameras}"
+                                                  SelectedItem="{Binding Camera2.SelectedCamera}"
+                                                  DisplayMemberPath="DisplayName"
+                                                  Width="200"
+                                                  Margin="5,0"
+                                                  IsEnabled="{Binding Camera2.ShowCameraList}"
+                                                  Visibility="{Binding Camera2.ShowCameraList, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                  Style="{StaticResource CameraComboBoxStyle}">
+                                            <ComboBox.ToolTip>
+                                                <TextBlock>Выберите USB-камеру с ПК</TextBlock>
+                                            </ComboBox.ToolTip>
+                                        </ComboBox>
+
+                                        <!-- Поле для ввода URL (скрытое по умолчанию) -->
+                                        <TextBox Text="{Binding Camera2.CameraUrl}" 
+                                                 Width="200" 
+                                                 Margin="5,0"
+                                                 IsEnabled="{Binding Camera2.ShowUrlInput}"
+                                                 Visibility="{Binding Camera2.ShowUrlInput, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBox.ToolTip>
+                                                <TextBlock>Введите URL IP-камеры (например: rtsp://192.168.1.100:554 или 0 для веб-камеры)</TextBlock>
+                                            </TextBox.ToolTip>
+                                        </TextBox>
+
+                                        <!-- Кнопки переключения между режимами -->
+                                        <Button Content="🌐 IP" 
+                                                Command="{Binding Camera2.SwitchToUrlInputCommand}"
+                                                Style="{StaticResource SwitchButtonStyle}"
+                                                Visibility="{Binding Camera2.ShowCameraList, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                ToolTip="Переключиться на ввод URL IP-камеры"/>
+
+                                        <Button Content="📷 USB" 
+                                                Command="{Binding Camera2.SwitchToCameraListCommand}"
+                                                Style="{StaticResource SwitchButtonStyle}"
+                                                Visibility="{Binding Camera2.ShowUrlInput, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                ToolTip="Переключиться на выбор USB-камеры"/>
+
+                                        <Button Content="🔄 Обновить" 
+                                                Command="{Binding Camera2.LoadAvailableCamerasCommand}"
+                                                Style="{StaticResource SwitchButtonStyle}"
+                                                ToolTip="Обновить список USB-камер"/>
+                                    </StackPanel>
+
+                                    <Separator Width="2" Background="Gray" Margin="10,0" Height="28" VerticalAlignment="Center"/>
+
+                                    <!-- Кнопки управления -->
+                                    <Button Content="🔗 Подключить" 
+                                            Command="{Binding Camera2.ConnectCommand}"
+                                            Margin="5,0"
+                                            Padding="10,5"
+                                            Background="{Binding Camera2.IsConnected, Converter={StaticResource BooleanToColorConverter}}"
+                                            Foreground="White"
+                                            Height="32"
+                                            VerticalAlignment="Center"/>
+
+                                    <Button Content="▶ Live" 
+                                            Command="{Binding Camera2.StartLiveStreamCommand}"
+                                            Margin="5,0"
+                                            Padding="10,5"
+                                            Background="#007ACC"
+                                            Foreground="White"
+                                            IsEnabled="{Binding Camera2.IsConnected}"
+                                            Height="32"
+                                            VerticalAlignment="Center"/>
+
+                                    <Button Content="⏹ Стоп" 
+                                            Command="{Binding Camera2.StopLiveStreamCommand}"
+                                            Margin="5,0"
+                                            Padding="10,5"
+                                            Background="#D83B01"
+                                            Foreground="White"
+                                            Height="32"
+                                            VerticalAlignment="Center"/>
+
+                                    <Button Content="📸 Кадр" 
+                                            Command="{Binding Camera2.CaptureFrameCommand}"
+                                            Margin="5,0"
+                                            Padding="10,5"
+                                            Height="32"
+                                            VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- Вкладка 2: Результаты проверки -->
+            <TabItem Header="📊 Результаты">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="300"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Результаты проверки -->
+                    <Grid Grid.Column="0" Margin="5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Оригинальное изображение с камеры 1 -->
+                        <Border Grid.Row="0" BorderBrush="LightGray" BorderThickness="1" 
+                                Background="Black" Margin="0,0,0,5">
+                            <Grid>
+                                <Image Source="{Binding Camera1.CameraImage}" 
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                                <TextBlock Text="Исходное изображение (Камера 1)" 
+                                           HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                           Background="#80000000" Foreground="White" Padding="5,2" Margin="5"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Результаты с дефектами -->
+                        <Border Grid.Row="1" BorderBrush="LightGray" BorderThickness="1" 
+                                Background="Black" Margin="0,5,0,0">
+                            <Grid>
+                                <Image Source="{Binding ProcessedImage}" 
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                                <TextBlock Text="Результаты проверки (дефекты выделены цветом)" 
+                                           HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                           Background="#80000000" Foreground="White" Padding="5,2" Margin="5"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <!-- Панель информации -->
+                    <Grid Grid.Column="1" Margin="5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Статус проверки -->
+                        <GroupBox Grid.Row="0" Header="Статус проверки" Margin="5">
+                            <StackPanel>
+                                <TextBlock Text="{Binding InspectionStatus}" 
+                                           FontWeight="Bold" 
+                                           TextWrapping="Wrap"
+                                           Margin="5"
+                                           Foreground="#007ACC"/>
+
+                                <Border Height="1" Background="LightGray" Margin="0,5"/>
+
+                                <Grid Margin="5">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" 
+                                               Text="Проверка:" 
+                                               Margin="0,2"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" 
+                                               Text="{Binding IsInspecting, Converter={StaticResource BooleanToStatusConverter}}"
+                                               Margin="5,2"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" 
+                                               Text="Дефекты:" 
+                                               Margin="0,2"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" 
+                                               Text="{Binding DefectsCount}"
+                                               Foreground="{Binding DefectsCount, Converter={StaticResource DefectsToColorConverter}}"
+                                               Margin="5,2"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" 
+                                               Text="Камера 1:" 
+                                               Margin="0,2"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" 
+                                               Text="{Binding Camera1.IsConnected, Converter={StaticResource BooleanToStatusConverter}}"
+                                               Foreground="{Binding Camera1.IsConnected, Converter={StaticResource BooleanToStatusColorConverter}}"
+                                               Margin="5,2"/>
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" 
+                                               Text="Камера 2:" 
+                                               Margin="0,2"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" 
+                                               Text="{Binding Camera2.IsConnected, Converter={StaticResource BooleanToStatusConverter}}"
+                                               Foreground="{Binding Camera2.IsConnected, Converter={StaticResource BooleanToStatusColorConverter}}"
+                                               Margin="5,2"/>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Дефекты -->
+                        <GroupBox Grid.Row="1" Header="Найденные дефекты" Margin="0,5,0,0">
+                            <ListView ItemsSource="{Binding Defects}" Height="200">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Тип" DisplayMemberBinding="{Binding Type}" Width="100"/>
+                                        <GridViewColumn Header="X" DisplayMemberBinding="{Binding Location.X}" Width="40"/>
+                                        <GridViewColumn Header="Y" DisplayMemberBinding="{Binding Location.Y}" Width="40"/>
+                                        <GridViewColumn Header="Уверенность" 
+                                                        DisplayMemberBinding="{Binding Confidence, StringFormat={}{0:P0}}" 
+                                                        Width="70"/>
+                                        <GridViewColumn Header="Серьезность" DisplayMemberBinding="{Binding Severity}" Width="80"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </GroupBox>
+
+                        <!-- Компоненты -->
+                        <GroupBox Grid.Row="2" Header="Компоненты платы" Margin="0,5,0,0">
+                            <ListView ItemsSource="{Binding Components}" Height="200">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Обозн." DisplayMemberBinding="{Binding Designator}" Width="60"/>
+                                        <GridViewColumn Header="Тип" DisplayMemberBinding="{Binding Type}" Width="80"/>
+                                        <GridViewColumn Header="Дефекты" DisplayMemberBinding="{Binding Defects.Count}" Width="60"/>
+                                        <GridViewColumn Header="Уверенность" 
+                                                        DisplayMemberBinding="{Binding DetectionConfidence, StringFormat={}{0:P0}}" 
+                                                        Width="70"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </GroupBox>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- Статусная строка -->
+        <StatusBar Grid.Row="2" Background="#007ACC">
+            <StatusBarItem>
+                <TextBlock Text="{Binding InspectionStatus}" 
+                           Foreground="White" 
+                           FontWeight="Bold"/>
+            </StatusBarItem>
+
+            <Separator/>
+
+            <StatusBarItem>
+                <TextBlock Text="{Binding DefectsCount, StringFormat='Дефектов: {0}'}" 
+                           Foreground="White"/>
+            </StatusBarItem>
+
+            <Separator/>
+
+            <StatusBarItem>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Камера1:" 
+                               Foreground="White"
+                               Margin="5,0,0,0"/>
+                    <Ellipse Width="10" Height="10" 
+                             Fill="{Binding Camera1.IsConnected, Converter={StaticResource BooleanToStatusColorConverter}}"
+                             Margin="2,0,5,0"/>
+                    <TextBlock Text="{Binding Camera1.IsLiveStreaming, Converter={StaticResource BooleanToStatusConverter}}"
+                               Foreground="White"/>
+                </StackPanel>
+            </StatusBarItem>
+
+            <Separator/>
+
+            <StatusBarItem>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Камера2:" 
+                               Foreground="White"
+                               Margin="5,0,0,0"/>
+                    <Ellipse Width="10" Height="10" 
+                             Fill="{Binding Camera2.IsConnected, Converter={StaticResource BooleanToStatusColorConverter}}"
+                             Margin="2,0,5,0"/>
+                    <TextBlock Text="{Binding Camera2.IsLiveStreaming, Converter={StaticResource BooleanToStatusConverter}}"
+                               Foreground="White"/>
+                </StackPanel>
+            </StatusBarItem>
+
+            <Separator/>
+
+            <StatusBarItem>
+                <TextBlock Text="Kamera21 Dual-Camera v2.1" 
+                           Foreground="White"/>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>
